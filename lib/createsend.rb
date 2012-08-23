@@ -28,6 +28,10 @@ module CreateSend
     def base_uri(uri)
       r = CreateSend.base_uri uri
     end
+
+    def proxy(host, port, user=nil, password=nil)
+      r = CreateSend.proxy host, port, user, password
+    end
   end
 
   # Represents a CreateSend API error. Contains specific data about the error.
@@ -84,6 +88,10 @@ module CreateSend
       return @@api_key unless api_key
       @@api_key = api_key
       basic_auth @@api_key, 'x'
+    end
+
+    def self.proxy(host, port, user=nil, password=nil)
+      http_proxy host, port, user, password
     end
 
     # Gets your CreateSend API key, given your site url, username and password.

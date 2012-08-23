@@ -6,9 +6,18 @@ class CreateSendTest < Test::Unit::TestCase
       @api_key = '123123123123123123123'
       @base_uri = 'https://api.createsend.com/api/v3'
       CreateSend.api_key @api_key
+      CreateSend.proxy 'proxy.foo.com', 80, 'user', 'pass'
       @cs = CreateSend::CreateSend.new
     end
-    
+
+    should "set the proxy settings" do
+      stub_get(@apikey, "clients.json", "clients.json")
+      assert_equal @cs.class.default_options[:http_proxyaddr], 'proxy.foo.com'
+      assert_equal @cs.class.default_options[:http_proxyport], 80
+      assert_equal @cs.class.default_options[:http_proxyuser], 'user'
+      assert_equal @cs.class.default_options[:http_proxypass], 'pass'
+    end
+
     should "include the CreateSend module VERSION constant as part of the user agent when making a call" do
       # This test is done to ensure that the version from HTTParty isn't included instead
       assert CreateSend::CreateSend.headers["User-Agent"] == "createsend-ruby-#{CreateSend::VERSION}"
@@ -16,7 +25,7 @@ class CreateSendTest < Test::Unit::TestCase
       clients = @cs.clients
       clients.size.should == 2
     end
-    
+
     should "get api key" do
       uri = URI.parse(@base_uri)
       site_url = "http://iamadesigner.createsend.com/"
@@ -34,14 +43,14 @@ class CreateSendTest < Test::Unit::TestCase
       clients.first.ClientID.should == '4a397ccaaa55eb4e6aa1221e1e2d7122'
       clients.first.Name.should == 'Client One'
     end
-    
+
     should "get all countries" do
       stub_get(@api_key, "countries.json", "countries.json")
       countries = @cs.countries
       countries.size.should == 245
       assert countries.include? "Australia"
     end
-    
+
     should "get system date" do
       stub_get(@api_key, "systemdate.json", "systemdate.json")
       systemdate = @cs.systemdate.SystemDate
@@ -54,7 +63,7 @@ class CreateSendTest < Test::Unit::TestCase
       timezones.size.should == 97
       assert timezones.include? "(GMT+12:00) Fiji"
     end
-    
+
     should "get all administrators" do
       stub_get(@api_key, "admins.json", "administrators.json")
       administrators = @cs.administrators
@@ -63,20 +72,20 @@ class CreateSendTest < Test::Unit::TestCase
       administrators.first.Name.should == 'Admin One'
       administrators.first.Status.should == 'Active'
     end
-      
+
     should "set primary contact" do
       email = 'admin@blackhole.com'
       stub_put(@api_key, "primarycontact.json?email=#{CGI.escape(email)}", 'admin_set_primary_contact.json')
       result = @cs.set_primary_contact email
       result.EmailAddress.should == email
     end
-    
+
     should "get primary contact" do
       stub_get(@api_key, "primarycontact.json", 'admin_get_primary_contact.json')
       result = @cs.get_primary_contact
       result.EmailAddress.should == 'admin@blackhole.com'
     end
-        
+
   end
 
   context "when the CreateSend API responds with an error" do
@@ -87,7 +96,7 @@ class CreateSendTest < Test::Unit::TestCase
       @cs = CreateSend::CreateSend.new
       @template = CreateSend::Template.new('98y2e98y289dh89h938389')
     end
-    
+
     { ["400", "Bad Request"]  => CreateSend::BadRequest,
       ["401", "Unauthorized"] => CreateSend::Unauthorized,
       ["404", "Not Found"]    => CreateSend::NotFound,
@@ -103,7 +112,7 @@ class CreateSendTest < Test::Unit::TestCase
       context "#{status.first}, a post" do
         should "raise a #{exception.name} error" do
           stub_post(@api_key, "clients.json", (status.first == '400' or status.first == '401') ? 'custom_api_error.json' : nil, status)
-          lambda { CreateSend::Client.create "Client Company Name", 
+          lambda { CreateSend::Client.create "Client Company Name",
             "(GMT+10:00) Canberra, Melbourne, Sydney", "Australia" }.should raise_error(exception)
         end
       end
@@ -111,7 +120,7 @@ class CreateSendTest < Test::Unit::TestCase
       context "#{status.first}, a put" do
         should "raise a #{exception.name} error" do
           stub_put(@api_key, "templates/#{@template.template_id}.json", (status.first == '400' or status.first == '401') ? 'custom_api_error.json' : nil, status)
-          lambda { @template.update "Template One Updated", "http://templates.org/index.html", 
+          lambda { @template.update "Template One Updated", "http://templates.org/index.html",
             "http://templates.org/files.zip" }.should raise_error(exception)
         end
       end
